@@ -1,0 +1,406 @@
+<template>
+  <v-layout v-resize="setCalendarHeight" xs12 wrap column>
+    <v-flex>
+      <v-layout id="calendar_controls" row wrap align-start pb-3>
+        <v-flex xs12 sm6 pb-1>
+          <v-layout column justify-center>
+            <span class="title">{{employee.name}}</span>
+            <span class="subheading">{{employee.title}}</span>
+          </v-layout>
+        </v-flex>
+
+        <v-flex xs12 sm6>
+          <v-layout row
+                    :justify-end="$vuetify.breakpoint.smAndUp"
+                    :justify-space-between="$vuetify.breakpoint.xsOnly">
+            <v-btn @click="$refs.calendar.prev()"
+                   icon class="ma-0 primary elevation-1">
+              <v-icon>
+                keyboard_arrow_left
+              </v-icon>
+            </v-btn>
+            <v-btn @click="$refs.calendar.next()"
+                   icon class="my-0 primary elevation-1">
+              <v-icon>
+                keyboard_arrow_right
+              </v-icon>
+            </v-btn>
+            <v-btn-toggle
+                mandatory
+                v-model="calendarConfig.type"
+                class="elevation-0">
+              <v-btn v-for="( option, index ) in calendarConfig.typeOptions"
+                     :key="index"
+                     :value="option.value">
+                {{option.text}}
+              </v-btn>
+            </v-btn-toggle>
+            <template v-if="true">
+              <v-btn @click="$refs.schedulesEditDialog.open( datum.schedules )"
+                     icon
+                     class="ma-0 ml-2 primary elevation-1">
+                <v-icon small>
+                  edit
+                </v-icon>
+              </v-btn>
+            </template>
+          </v-layout>
+        </v-flex>
+      </v-layout>
+    </v-flex>
+
+    <v-flex>
+      <v-calendar
+          ref="calendar"
+          v-model="calendarConfig.start"
+          :locale="$store.state.locale"
+          :style="{height: calendarConfig.height}"
+          :first-interval="calendarConfig.firstInterval"
+          :interval-count="calendarConfig.intervalCount"
+          :weekdays="calendarConfig.weekdays"
+          :type="calendarConfig.type"
+          :end="calendarConfig.end"
+          :interval-height="calendarConfig.intervalHeight"
+          :interval-format="calendarConfig.intervalFormat"
+          v-touch="{
+            left: () => $refs.calendar.next(),
+            right: () => $refs.calendar.prev(),
+          }"
+          color="primary">
+
+        <template slot="dayBody" slot-scope="{ date }">
+          <v-layout
+              column
+              v-for="schedule in scheduleMap(date)"
+              :key="schedule.id"
+              :style="{
+                top: `${myTimeToY(schedule.start) - calendarConfig.margin + 1}px`,
+                height: `${myMinutesToPixels(schedule.duration) + calendarConfig.margin * 2}px`,
+              }"
+              class="my-schedule">
+
+            <template v-for="n in schedule.slots">
+              <v-layout v-if="slotIsFilled( schedule, n-1, eventsMap, date )"
+                        :key="n"
+                        row align-center
+                        class="my-schedule__slot error">
+                <span class="slot-index">{{n}}</span>
+              </v-layout>
+              <v-layout v-else
+                        :key="n"
+                        row align-center
+                        class="my-schedule__slot">
+                <span class="slot-index">{{n}}</span>
+                <v-layout
+                    row justify-center
+                    @click="$refs.eventCreateDialog.open( schedule, n-1, eventsMap, date )"
+                    v-ripple class="my-add-event px-1">
+                  <v-icon small>add</v-icon>
+                </v-layout>
+              </v-layout>
+            </template>
+          </v-layout>
+
+          <div v-for="event in eventsMap[date]"
+               :key="event.id"
+               @click="$refs.eventEditDialog.open( event )"
+               :style="{ top: myTimeToY(event.start) + 'px', height: myMinutesToPixels(event.duration) + 'px' }"
+               class="my-event px-1 white--text text-truncate">
+            {{"Очень длинное название ивента"}}
+          </div>
+        </template>
+      </v-calendar>
+    </v-flex>
+
+    <event-edit-dialog ref="eventEditDialog"/>
+
+    <event-create-dialog ref="eventCreateDialog"/>
+
+    <schedules-edit-dialog ref="schedulesEditDialog"/>
+
+  </v-layout>
+</template>
+
+<script>
+import {
+  format,
+  parse,
+} from "date-fns"
+import {
+  mapState,
+} from "vuex"
+import axios from "axios"
+import EventEditDialog from "../components/EventEditDialog"
+import EventCreateDialog from "../components/EventCreateDialog"
+import SchedulesEditDialog from "../components/SchedulesEditDialog"
+
+export default {
+  name: "business-home",
+  components: {
+    EventEditDialog,
+    EventCreateDialog,
+    SchedulesEditDialog,
+  },
+  props: [
+    "employeeId",
+  ],
+  data() {
+    return {
+      calendarConfig: {
+        type: "4day",
+        firstInterval: 8,
+        intervalCount: 11,
+        intervalHeight: 60,
+        margin: 1.5,
+        intervalFormat( time ) {
+          return time.time
+        },
+        typeOptions: [
+          { text: "День", value: "day", },
+          { text: "4 дня", value: "4day", },
+          { text: "Нед", value: "week", },
+        ],
+        defaultWeekdays: [ 1, 2, 3, 4, 5, 6, 0, ], // eslint-disable-line no-magic-numbers
+        weekdays: [ 1, 2, 3, 4, 5, 6, 0, ], // eslint-disable-line no-magic-numbers
+        height: 0, // eslint-disable-line no-magic-numbers
+        model: false,
+      },
+      employee: {
+        id: 1,
+        name: "Макар Лежников",
+        title: "Написатель кода",
+      },
+      datum: {
+        schedules: [],
+        appointments: [],
+      },
+      requestParams: {},
+    }
+  },
+  methods: {
+    getSchedules() {
+      this.datum.schedules = [
+        {
+          id: "s1",
+          businessId: "b1",
+          endDate: "24-08-2011",
+          startDate: "24-08-2020",
+          slotDuration: 30,
+          slots: 8,
+          startTime: {
+            hour: 9,
+            minute: 0,
+          },
+          weekdayCode: 124,
+        },
+        {
+          id: "s2",
+          businessId: "b2",
+          endDate: "2011-08-24",
+          startDate: "2020-08-24",
+          slotDuration: 20,
+          slots: 6,
+          startTime: {
+            hour: 15,
+            minute: 0,
+          },
+          weekdayCode: 1,
+        },
+      ]
+      this.datum.schedules.forEach( ( schedule ) => {
+        /* *
+         * 1) Makes array of day indices from weekdayCode
+         * Performs day shift, since
+         * for weekdayCode Sunday is the last weekday,
+         * whereas for JS it's the first day
+         * */
+
+        /* eslint-disable no-magic-numbers */
+        schedule.weekDays = new Array( 7 )
+        for ( let i = 0; i < 7; i++ ) {
+          schedule.weekDays[ ( i + 6 ) % 7 ] = ( schedule.weekdayCode >> i & 1 ) === 1
+        }
+        /* eslint-enable no-magic-numbers */
+
+        /* *
+         * 2) Adds date for startTime
+         * */
+        const startTime = new Date()
+        startTime.setHours( schedule.startTime.hour )
+        startTime.setMinutes( schedule.startTime.minute )
+        schedule.startTime.date = startTime
+
+        /* *
+         * 3) Adds duration and start in "HH:MM" format
+         * */
+        schedule.duration = schedule.slots * schedule.slotDuration
+        schedule.start = format( startTime, "HH:mm" )
+      } )
+
+      return this.axios.get( "/schedule", {
+        params: this.requestParams,
+      } )
+    },
+    getAppointments() {
+      this.datum.appointments = [
+        {
+          businessId: "b1",
+          clientId: "c1",
+          scheduleId: "s1",
+          serviceId: "se1",
+          date: "2019-02-25",
+          employeeId: "e1",
+          id: "a1",
+          isConfirmed: true,
+          slotDuration: 2,
+          slotIndex: 3,
+          status: 0,
+        },
+        {
+          businessId: "b1",
+          clientId: "c1",
+          scheduleId: "s2",
+          serviceId: "se1",
+          date: "2019-03-02",
+          employeeId: "e1",
+          id: "a2",
+          isConfirmed: true,
+          slotDuration: 1,
+          slotIndex: 1,
+          status: 0,
+        },
+        {
+          businessId: "b1",
+          clientId: "c1",
+          scheduleId: "s2",
+          serviceId: "se1",
+          date: "2019-03-02",
+          employeeId: "e1",
+          id: "a3",
+          isConfirmed: true,
+          slotDuration: 2,
+          slotIndex: 2,
+          status: 0,
+        },
+      ]
+
+      return this.axios.get( "/appointment", {
+        params: this.requestParams,
+      } )
+    },
+    myTimeToY( time ) {
+      const digitsIndex = -2
+
+      let tTY = this.$refs.calendar.timeToY( time ) + this.calendarConfig.margin
+      tTY += this.$refs.calendar.minutesToPixels( Number.parseInt( time.substr( digitsIndex ) ) )
+      return tTY
+    },
+    myMinutesToPixels( minutes ) {
+      let mTP = this.$refs.calendar.minutesToPixels( minutes )
+      mTP -= 2 * this.calendarConfig.margin // eslint-disable-line no-magic-numbers
+      return mTP
+    },
+    setCalendarHeight() {
+      /* eslint-disable no-magic-numbers */
+      if ( this.$vuetify.breakpoint.mdAndUp ) {
+        let toolbarHeight = Number.parseInt( document.getElementById( "toolbar" ).children[ 0 ].style.height.slice( 0, -2 ), 10 )
+        let containerPadding = 2 * ( this.$vuetify.breakpoint.mdAndUp ? 24 : 16 )
+        let buttonsHeight = document.getElementById( "calendar_controls" ).clientHeight
+
+        this.calendarConfig.height = `${window.innerHeight - toolbarHeight - containerPadding - buttonsHeight}px`
+      } else {
+        this.calendarConfig.height = "auto"
+      }
+      /* eslint-enable no-magic-numbers */
+    },
+    scheduleMap( date ) {
+      const sMap = []
+      const parsedDate = parse( date, "YYYY-MM-DD", new Date() )
+      this.datum.schedules.forEach( ( schedule ) => {
+        if ( schedule.weekDays[ parsedDate.getDay() ] ) {
+          sMap.push( schedule )
+        }
+      } )
+      return sMap
+    },
+    slotIsFilled( schedule, index, eventsMap, date ) {
+      return eventsMap[ date ] && eventsMap[ date ].some( ( event ) => {
+        const sameSchedule = schedule.id === event.scheduleId
+        const sameSlot = ( index >= event.slotIndex ) && ( index < event.slotIndex + event.slotDuration )
+        return sameSchedule && sameSlot
+      } )
+    },
+  },
+  mounted() {
+    if ( this.employeeId ) {
+      this.requestParams.employeeId = this.employeeId
+    }
+
+    axios.all( [ this.getSchedules(), this.getAppointments(), ] )
+      .then( ( schedules, appointments ) => {
+        console.log( schedules, appointments )
+      } )
+      .catch( ( errorSchedules, errorAppointments ) => {
+        console.error( errorSchedules, errorAppointments )
+      } )
+  },
+  computed: {
+    eventsMap() {
+      const eMap = {}
+      this.datum.appointments.forEach( ( event ) => {
+        let i = 0
+        while ( this.datum.schedules[ i ].id !== event.scheduleId ) i++
+
+        const schedule = this.datum.schedules[ i ]
+        const startDate = new Date( schedule.startTime.date )
+        startDate.setMinutes( startDate.getMinutes() + ( schedule.slotDuration * event.slotIndex ) )
+
+        event.start = format( startDate, "HH:mm" )
+        event.duration = event.slotDuration * schedule.slotDuration
+
+        if ( !eMap[ event.date ] ) eMap[ event.date ] = []
+        eMap[ event.date ].push( event )
+      } )
+      return eMap
+    },
+    ...mapState( [
+      "axios",
+    ] ),
+  },
+}
+</script>
+
+<style lang="stylus">
+
+  .my-event, .my-schedule
+    position absolute
+    text-overflow ellipsis
+    font-size 12px
+    margin-right 0
+
+  .my-event
+    left 16px
+    right 0
+    border-radius 2px
+    background-color var(--v-primary-base)
+
+  .my-schedule
+    background-color rgba(0, 0, 0, 0.08)
+    left 0
+    right 0
+    &__slot
+      & > .slot-index
+        display inline-block
+        text-align center
+        width 16px
+
+      & > .my-add-event
+        cursor pointer
+
+        &:hover
+          background-color var(--v-primary-lighten4)
+
+  @media (max-width: 600px)
+    .v-calendar-daily_head-day-label
+      font-size 20px
+</style>
