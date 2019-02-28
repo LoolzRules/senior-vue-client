@@ -3,20 +3,30 @@
     <v-flex xs12>
       <v-data-iterator
           class="fill-height my-data-iterator"
-          :items="items"
+          :items="categories"
           :rows-per-page-items="$store.state.customItemsPerPage"
+          :pagination.sync="pagination"
           content-tag="v-layout"
           row wrap>
         <v-flex
             slot="item"
             slot-scope="props"
-            pa-1 xs12 sm6 md4 lg3>
+            pa-1 :class="`xs${Math.max( 12/pagination.rowsPerPage, 3 )}`">
           <v-card>
             <v-card-title class="subheading font-weight-bold layout justify-space-between">
               {{ props.item.name }}
-              <v-icon small>
-                edit
-              </v-icon>
+              <v-layout align-content-center justify-end>
+                <v-icon v-if="$store.state.parsedPermissions.permsCategory[2]"
+                        @click="editCategory( props.item )"
+                        small class="my-2 ml-2">
+                  edit
+                </v-icon>
+                <v-icon v-if="$store.state.parsedPermissions.permsCategory[3]"
+                        @click="deleteCategory( props.item )"
+                        small class="my-2">
+                  delete
+                </v-icon>
+              </v-layout>
             </v-card-title>
             <v-divider></v-divider>
             <v-list dense>
@@ -24,16 +34,24 @@
                            :key="child.id">
                 <v-list-tile-content>{{child.name}}</v-list-tile-content>
                 <v-list-tile-content class="align-end font-weight-bold">
-                  {{child.price}}₸
+                  {{child.cost}}₸
                 </v-list-tile-content>
-                <v-icon small class="my-2 ml-2">
+                <v-icon v-if="$store.state.parsedPermissions.permsCategory[2]"
+                        @click="editService( props.item, child )"
+                        small class="my-2 ml-2">
                   edit
+                </v-icon>
+                <v-icon v-if="$store.state.parsedPermissions.permsCategory[3]"
+                        @click="deleteService( props.item, child )"
+                        small class="my-2">
+                  delete
                 </v-icon>
               </v-list-tile>
             </v-list>
           </v-card>
         </v-flex>
-        <v-btn slot="actions-append" @click="addNew"
+        <v-btn v-if="$store.state.parsedPermissions.permsCategory[0]"
+               slot="actions-append" @click="addNewCategory"
                icon class="ma-0">
           <v-icon>add</v-icon>
         </v-btn>
@@ -43,58 +61,76 @@
 </template>
 
 <script>
+import {
+  mapState,
+} from "vuex"
 
 export default {
   name: "business-categories",
   data() {
     return {
-      items: [
-        {
-          id: "c1",
-          name: "Категория 1",
-          children: [
-            { id: "s11", price: 2000, name: "Услуга 1", },
-            { id: "s12", price: 1000, name: "Услуга 2", },
-            { id: "s13", price: 1500, name: "Услуга 3", },
-          ],
-        },
-        {
-          id: "c2",
-          name: "Категория 2",
-          children: [
-            { id: "s4", price: 200, name: "Услуга 4", },
-            { id: "s5", price: 150, name: "Услуга 5", },
-            { id: "s6", price: 300, name: "Услуга 6", },
-          ],
-        },
-        {
-          id: "c3",
-          name: "Категория 3",
-          children: [
-            { id: "s7", price: 200, name: "Услуга 7", },
-            { id: "s8", price: 150, name: "Услуга 8", },
-            { id: "s9", price: 300, name: "Услуга 9", },
-          ],
-        },
-        {
-          id: "c4",
-          name: "Категория 4",
-          children: [
-            { id: "s10", price: 200, name: "Услуга 10", },
-            { id: "s11", price: 150, name: "Услуга 11", },
-            { id: "s12", price: 300, name: "Услуга 12", },
-          ],
-        },
-      ],
+      categories: [],
+      pagination: {
+        rowsPerPage: 2,
+      },
+      newCategoryName: null,
+      newCategoryDialog: false,
     }
   },
   methods: {
-    edit( item ) {
-      console.log( item )
+    editCategory( category ) {
+      console.log( category )
     },
-    addNew() {
+    deleteCategory( category ) {
+      console.log( category )
+    },
+    editService( category, service ) {
+      console.log( category, service )
+    },
+    deleteService( category, service ) {
+      console.log( category, service )
+    },
+    addNewCategory() {
       console.log()
     },
+    getCategories() {
+      return this.axios.get( "/category", {
+        params: {
+          businessId: this.$store.state.parsedToken.business_id,
+        },
+      } )
+    },
+    getServices( categoryId ) {
+      return this.axios.get( "/service", {
+        params: {
+          categoryId,
+        },
+      } )
+    },
+  },
+  mounted() {
+    this.getCategories()
+      .then( response => {
+        response.data.forEach( category => {
+          category.children = []
+          this.getServices( category.id )
+            .then( resp => {
+              category.children = resp.data
+            } )
+            .catch( err => {
+              console.error( err )
+            } )
+        } )
+        this.categories = response.data
+      } )
+      .catch( error => {
+        console.error( error )
+      } )
+  },
+  computed: {
+    ...mapState( [
+      "axios",
+    ] ),
   },
 }
 </script>

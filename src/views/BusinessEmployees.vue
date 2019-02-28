@@ -5,37 +5,32 @@
           class="fill-height my-data-iterator"
           :items="employees"
           :rows-per-page-items="$store.state.customItemsPerPage"
+          :pagination.sync="pagination"
           content-tag="v-layout"
           row wrap>
         <v-flex
             slot="item"
             slot-scope="props"
-            pa-1 xs12 sm6 md4 lg3>
+            pa-1 :class="`xs${Math.max( 12/pagination.rowsPerPage, 3 )}`">
           <v-card>
             <v-card-title class="subheading font-weight-bold layout justify-space-between">
               {{ props.item.name }}
               <v-layout justify-end align-center>
-                <!--<v-btn v-if="$store.state.parsedPermissions.permsEmployee[2]"-->
-                       <!--@click="updateEmployee( props.item.id )"-->
-                       <!--icon small class="ma-0">-->
-                  <!--<v-icon small>-->
-                    <!--edit-->
-                  <!--</v-icon>-->
-                <!--</v-btn>-->
-                <v-btn v-if="$store.state.parsedPermissions.permsEmployee[3]"
-                       @click="deleteEmployee( props.item.id )"
-                       icon small class="ma-0">
-                  <v-icon small>
-                    delete
-                  </v-icon>
-                </v-btn>
-                <v-btn v-if="$store.state.parsedPermissions.permsSchedule[5]"
-                       @click="viewEmployee( props.item.id )"
-                       icon small class="ma-0">
-                  <v-icon small>
-                    schedule
-                  </v-icon>
-                </v-btn>
+                <v-icon v-if="$store.state.parsedPermissions.permsEmployee[2]"
+                        @click="updateEmployeeDialog( props.item )"
+                        small>
+                  edit
+                </v-icon>
+                <v-icon v-if="$store.state.parsedPermissions.permsEmployee[3]"
+                        @click="deleteEmployeeDialog( props.item )"
+                        small>
+                  delete
+                </v-icon>
+                <v-icon v-if="$store.state.parsedPermissions.permsSchedule[5]"
+                        @click="viewEmployeeSchedules( props.item )"
+                        small>
+                  schedule
+                </v-icon>
               </v-layout>
             </v-card-title>
             <v-divider></v-divider>
@@ -46,7 +41,7 @@
                   <v-list-tile-content>
                     {{field.text}}
                   </v-list-tile-content>
-                  <v-list-tile-content class="align-end font-weight-bold">
+                  <v-list-tile-content class="align-end font-weight-bold text-truncate">
                     {{props.item[field.value]}}
                   </v-list-tile-content>
                 </v-list-tile>
@@ -56,9 +51,7 @@
                   <v-list-tile v-for="( perm, i ) in props.item[field.value]"
                                :key="i">
                     <v-list-tile-content>
-                      {{ labels[ (i + (props.item[field.value].length === 2)) % 4 ] }}
-                      {{ props.item[field.value].length === 4 ? "" : ownerships[ 0 + (props.item[field.value].length ===
-                      2) + (i > 3) ] }}
+                      {{ $store.state.permissionsNames[field.value][i] }}
                     </v-list-tile-content>
                     <v-list-tile-content class="align-end font-weight-bold">
                       {{ answers[ perm + 0 ] }}
@@ -71,7 +64,7 @@
                   <v-list-tile v-for="( service, i ) in props.item[field.value]"
                                :key="i">
                     <v-list-tile-content>
-                      {{ service.name }}
+                      {{ service }}
                     </v-list-tile-content>
                   </v-list-tile>
                 </v-list-group>
@@ -81,7 +74,7 @@
           </v-card>
         </v-flex>
         <v-btn v-if="$store.state.parsedPermissions.permsEmployee[0]"
-               slot="actions-append" @click="editItem(defaultItem)"
+               slot="actions-append" @click="addEmployeeDialog(defaultItem)"
                icon class="ma-0">
           <v-icon>
             add
@@ -90,10 +83,13 @@
       </v-data-iterator>
     </v-flex>
 
-    <v-dialog v-model="dialog" max-width="500px">
+    <v-dialog
+        v-if="($store.state.parsedPermissions.permsEmployee[0] && editedItem === -1) ||
+              ($store.state.parsedPermissions.permsEmployee[2] && editedItem !== -1)"
+        v-model="dialog" max-width="500px">
       <v-card>
         <v-card-title>
-          <span class="headline">Создание сотрудника</span>
+          <span class="headline">{{ editedItem === -1 ? "Создание" : "Редактирование" }} сотрудника</span>
         </v-card-title>
 
         <v-card-text>
@@ -111,17 +107,16 @@
               <v-flex xs12 sm6>
                 <v-text-field v-model="editedItem.email" label="E-mail"></v-text-field>
               </v-flex>
-              <v-flex xs12 sm6>
-                <v-checkbox v-model="editedItem.permsCatsC" label="Создание категорий"></v-checkbox>
-                <v-checkbox v-model="editedItem.permsCatsR" label="Получение категорий"></v-checkbox>
-                <v-checkbox v-model="editedItem.permsCatsU" label="Обновление категорий"></v-checkbox>
-                <v-checkbox v-model="editedItem.permsCatsD" label="Удаление категорий"></v-checkbox>
-              </v-flex>
-              <v-flex xs12 sm6>
-                <v-checkbox v-model="editedItem.permsEmpsC" label="Создание сотрудников"></v-checkbox>
-                <v-checkbox v-model="editedItem.permsEmpsR" label="Получение сотрудников"></v-checkbox>
-                <v-checkbox v-model="editedItem.permsEmpsU" label="Обновление сотрудников"></v-checkbox>
-                <v-checkbox v-model="editedItem.permsEmpsD" label="Удаление сотрудников"></v-checkbox>
+              <v-flex v-for="(perms, key) in $store.state.permissionsNames" :key="key">
+                <span class="caption">
+                  {{
+                    tableFields.filter( field => field.value === key )[0].text
+                  }}
+                </span>
+                <v-checkbox v-for="(name, i) in perms" :key="i"
+                            v-model="editedItem[key][i]"
+                            :label="name"></v-checkbox>
+                <v-divider></v-divider>
               </v-flex>
             </v-layout>
           </v-container>
@@ -134,6 +129,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
   </v-layout>
 </template>
 
@@ -185,8 +181,9 @@ export default {
           value: "permsAppointment",
         },
       ],
-      labels: [ "Может создавать", "Может видеть", "Может обновлять", "Может удалять", ],
-      ownerships: [ "свои", "чужие", ],
+      pagination: {
+        rowsPerPage: 2,
+      },
       answers: [ "Нет", "Да", ],
       employees: [
         // {
@@ -294,13 +291,18 @@ export default {
       }
       this.close()
     },
-    editItem( item ) {
-      this.editedIndex = this.employees.indexOf( item )
-      this.editedItem = JSON.parse( JSON.stringify( item ) )
+    addEmployeeDialog() {
+      this.editedIndex = -1
+      this.editedItem = JSON.parse( JSON.stringify( this.defaultItem ) )
       this.dialog = true
     },
-    deleteItem( item ) {
-      const index = this.employees.indexOf( item )
+    updateEmployeeDialog( employee ) {
+      this.editedIndex = this.employees.indexOf( employee )
+      this.editedItem = JSON.parse( JSON.stringify( employee ) )
+      this.dialog = true
+    },
+    deleteEmployeeDialog( employee ) {
+      const index = this.employees.indexOf( employee )
       const itemsToDelete = 1
       confirm( "Вы действительно хотите удалить сотрудника?" ) && this.employees.splice( index, itemsToDelete )
     },
@@ -314,20 +316,30 @@ export default {
         },
       } )
     },
+    viewEmployeeSchedules( employee ) {
+      this.$router.push( {
+        name: "otherSchedule",
+        params: {
+          employeeId: employee.id,
+          employeeName: employee.name,
+          employeeTitle: employee.title,
+        },
+      } )
+    },
   },
   mounted() {
     this.getEmployees()
       .then( ( response ) => {
         response.data.forEach( employee => {
           this.getEmployeePermissions( employee.id )
-            .then( response => {
-              const permissions = this.mapPermissions( response.data )
+            .then( resp => {
+              const permissions = this.mapPermissions( resp.data )
               for ( let key in permissions ) {
                 this.$set( employee, key, permissions[ key ] )
               }
             } )
-            .catch( error => {
-              console.log( error )
+            .catch( err => {
+              console.log( err )
             } )
         } )
         this.employees = response.data

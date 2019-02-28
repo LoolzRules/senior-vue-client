@@ -4,8 +4,8 @@
       <v-layout id="calendar_controls" row wrap align-start pb-3>
         <v-flex xs12 sm6 pb-1>
           <v-layout column justify-center>
-            <span class="title">{{employee.name}}</span>
-            <span class="subheading">{{employee.title}}</span>
+            <span class="title">{{employeeName}}</span>
+            <span class="subheading">{{employeeTitle}}</span>
           </v-layout>
         </v-flex>
 
@@ -35,10 +35,9 @@
                 {{option.text}}
               </v-btn>
             </v-btn-toggle>
-            <template v-if="true">
+            <template v-if="$store.state.parsedPermissions.permsSchedule[6]">
               <v-btn @click="$refs.schedulesEditDialog.open( datum.schedules )"
-                     icon
-                     class="ma-0 ml-2 primary elevation-1">
+                     icon class="ma-0 ml-2 primary elevation-1">
                 <v-icon small>
                   edit
                 </v-icon>
@@ -74,7 +73,7 @@
               v-for="schedule in scheduleMap(date)"
               :key="schedule.id"
               :style="{
-                top: `${myTimeToY(schedule.start) - calendarConfig.margin + 1}px`,
+                top: `${myTimeToY(schedule.startTime) - calendarConfig.margin + 1}px`,
                 height: `${myMinutesToPixels(schedule.duration) + calendarConfig.margin * 2}px`,
               }"
               class="my-schedule">
@@ -92,6 +91,9 @@
                         class="my-schedule__slot">
                 <span class="slot-index">{{n}}</span>
                 <v-layout
+                    v-if="!$store.state.parsedPermissions ||
+                      (employeeId === $store.state.parsedToken.sub && $store.state.parsedPermissions.permsAppointment[0]) ||
+                      (employeeId !== $store.state.parsedToken.sub && $store.state.parsedPermissions.permsAppointment[4])"
                     row justify-center
                     @click="$refs.eventCreateDialog.open( schedule, n-1, eventsMap, date )"
                     v-ripple class="my-add-event px-1">
@@ -104,7 +106,7 @@
           <div v-for="event in eventsMap[date]"
                :key="event.id"
                @click="$refs.eventEditDialog.open( event )"
-               :style="{ top: myTimeToY(event.start) + 'px', height: myMinutesToPixels(event.duration) + 'px' }"
+               :style="{ top: myTimeToY(event.startTime) + 'px', height: myMinutesToPixels(event.duration) + 'px' }"
                class="my-event px-1 white--text text-truncate">
             {{"Очень длинное название ивента"}}
           </div>
@@ -143,6 +145,8 @@ export default {
   },
   props: [
     "employeeId",
+    "employeeName",
+    "employeeTitle",
   ],
   data() {
     return {
@@ -179,110 +183,52 @@ export default {
   },
   methods: {
     getSchedules() {
-      this.datum.schedules = [
-        {
-          id: "s1",
-          businessId: "b1",
-          endDate: "24-08-2011",
-          startDate: "24-08-2020",
-          slotDuration: 30,
-          slots: 8,
-          startTime: {
-            hour: 9,
-            minute: 0,
-          },
-          weekdayCode: 124,
-        },
-        {
-          id: "s2",
-          businessId: "b2",
-          endDate: "2011-08-24",
-          startDate: "2020-08-24",
-          slotDuration: 20,
-          slots: 6,
-          startTime: {
-            hour: 15,
-            minute: 0,
-          },
-          weekdayCode: 1,
-        },
-      ]
-      this.datum.schedules.forEach( ( schedule ) => {
-        /* *
-         * 1) Makes array of day indices from weekdayCode
-         * Performs day shift, since
-         * for weekdayCode Sunday is the last weekday,
-         * whereas for JS it's the first day
-         * */
-
-        /* eslint-disable no-magic-numbers */
-        schedule.weekDays = new Array( 7 )
-        for ( let i = 0; i < 7; i++ ) {
-          schedule.weekDays[ ( i + 6 ) % 7 ] = ( schedule.weekdayCode >> i & 1 ) === 1
-        }
-        /* eslint-enable no-magic-numbers */
-
-        /* *
-         * 2) Adds date for startTime
-         * */
-        const startTime = new Date()
-        startTime.setHours( schedule.startTime.hour )
-        startTime.setMinutes( schedule.startTime.minute )
-        schedule.startTime.date = startTime
-
-        /* *
-         * 3) Adds duration and start in "HH:MM" format
-         * */
-        schedule.duration = schedule.slots * schedule.slotDuration
-        schedule.start = format( startTime, "HH:mm" )
-      } )
-
       return this.axios.get( "/schedule", {
         params: this.requestParams,
       } )
     },
     getAppointments() {
-      this.datum.appointments = [
-        {
-          businessId: "b1",
-          clientId: "c1",
-          scheduleId: "s1",
-          serviceId: "se1",
-          date: "2019-02-25",
-          employeeId: "e1",
-          id: "a1",
-          isConfirmed: true,
-          slotDuration: 2,
-          slotIndex: 3,
-          status: 0,
-        },
-        {
-          businessId: "b1",
-          clientId: "c1",
-          scheduleId: "s2",
-          serviceId: "se1",
-          date: "2019-03-02",
-          employeeId: "e1",
-          id: "a2",
-          isConfirmed: true,
-          slotDuration: 1,
-          slotIndex: 1,
-          status: 0,
-        },
-        {
-          businessId: "b1",
-          clientId: "c1",
-          scheduleId: "s2",
-          serviceId: "se1",
-          date: "2019-03-02",
-          employeeId: "e1",
-          id: "a3",
-          isConfirmed: true,
-          slotDuration: 2,
-          slotIndex: 2,
-          status: 0,
-        },
-      ]
+      // this.datum.appointments = [
+      //   {
+      //     businessId: "b1",
+      //     clientId: "c1",
+      //     scheduleId: "s1",
+      //     serviceId: "se1",
+      //     date: "2019-02-25",
+      //     employeeId: "e1",
+      //     id: "a1",
+      //     isConfirmed: true,
+      //     slotDuration: 2,
+      //     slotIndex: 3,
+      //     status: 0,
+      //   },
+      //   {
+      //     businessId: "b1",
+      //     clientId: "c1",
+      //     scheduleId: "s2",
+      //     serviceId: "se1",
+      //     date: "2019-03-02",
+      //     employeeId: "e1",
+      //     id: "a2",
+      //     isConfirmed: true,
+      //     slotDuration: 1,
+      //     slotIndex: 1,
+      //     status: 0,
+      //   },
+      //   {
+      //     businessId: "b1",
+      //     clientId: "c1",
+      //     scheduleId: "s2",
+      //     serviceId: "se1",
+      //     date: "2019-03-02",
+      //     employeeId: "e1",
+      //     id: "a3",
+      //     isConfirmed: true,
+      //     slotDuration: 2,
+      //     slotIndex: 2,
+      //     status: 0,
+      //   },
+      // ]
 
       return this.axios.get( "/appointment", {
         params: this.requestParams,
@@ -337,9 +283,36 @@ export default {
     }
 
     axios.all( [ this.getSchedules(), this.getAppointments(), ] )
-      .then( ( schedules, appointments ) => {
-        console.log( schedules, appointments )
-      } )
+      .then( axios.spread( ( schedulesResponse, appointmentsResponse ) => {
+        console.log( schedulesResponse )
+        schedulesResponse.data.forEach( schedule => {
+          /* *
+           * 1) Makes array of day indices from weekdayCode
+           * Performs day shift, since
+           * for weekdayCode Sunday is the last weekday,
+           * whereas for JS it's the first day
+           * */
+
+          /* eslint-disable no-magic-numbers */
+          schedule.weekDays = new Array( 7 )
+          for ( let i = 0; i < 7; i++ ) {
+            schedule.weekDays[ ( 7 - i ) % 7 ] = !!( schedule.weekdayCode >> i & 1 )
+          }
+          /* eslint-enable no-magic-numbers */
+
+          /* *
+           * 2) Adds date for startTime
+           * */
+          schedule.start = parse( schedule.startTime )
+
+          /* *
+           * 3) Adds duration
+           * */
+          schedule.duration = schedule.slots * schedule.slotDuration
+        } )
+        this.datum.schedules = schedulesResponse.data
+        this.datum.appointments = appointmentsResponse.data
+      } ) )
       .catch( ( errorSchedules, errorAppointments ) => {
         console.error( errorSchedules, errorAppointments )
       } )
@@ -352,7 +325,7 @@ export default {
         while ( this.datum.schedules[ i ].id !== event.scheduleId ) i++
 
         const schedule = this.datum.schedules[ i ]
-        const startDate = new Date( schedule.startTime.date )
+        const startDate = new Date( schedule.start )
         startDate.setMinutes( startDate.getMinutes() + ( schedule.slotDuration * event.slotIndex ) )
 
         event.start = format( startDate, "HH:mm" )
@@ -385,10 +358,13 @@ export default {
     background-color var(--v-primary-base)
 
   .my-schedule
-    background-color rgba(0, 0, 0, 0.08)
+    background-color rgba(127, 127, 127, 0.5)
     left 0
     right 0
     &__slot
+      box-sizing border-box
+      border-bottom 1px solid rgba(0, 0, 0, 0.5)
+
       & > .slot-index
         display inline-block
         text-align center
@@ -398,7 +374,7 @@ export default {
         cursor pointer
 
         &:hover
-          background-color var(--v-primary-lighten4)
+          background-color var(--v-primary-lighten3)
 
   @media (max-width: 600px)
     .v-calendar-daily_head-day-label

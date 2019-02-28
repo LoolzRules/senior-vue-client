@@ -1,6 +1,7 @@
 import Vue from "vue"
 import Vuex from "vuex"
 import axios from "axios"
+import permissionsNames from "./permissionsNames"
 
 Vue.use( Vuex )
 
@@ -19,6 +20,7 @@ const store = new Vuex.Store( {
     searchResults: [],
     parsedToken: null,
     parsedPermissions: null,
+    permissionsNames,
     axios: axios.create( {
       baseURL: "https://api.rustamzh.com",
       timeout: 10000,

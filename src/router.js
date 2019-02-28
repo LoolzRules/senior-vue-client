@@ -21,6 +21,7 @@ const router = new Router( {
     },
     {
       path: "/schedule/:employeeId",
+      name: "otherSchedule",
       component: BusinessSchedule,
       props: true,
     },
