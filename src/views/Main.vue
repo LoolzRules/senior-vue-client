@@ -32,9 +32,6 @@
 </template>
 
 <script>
-import {
-  mapState,
-} from "vuex"
 
 export default {
   data() {
@@ -76,9 +73,12 @@ export default {
   },
   methods: {
     search() {
-      this.axios.get( "/service", {
+      this.$axios.get( "/service", {
         params: {
           serviceName: this.searchValue,
+        },
+        data: {
+          mainSearch: true,
         },
       } ).then( ( response ) => {
         console.log( response )
@@ -86,11 +86,6 @@ export default {
         console.error( error )
       } )
     },
-  },
-  computed: {
-    ...mapState( [
-      "axios",
-    ] ),
   },
 }
 </script>

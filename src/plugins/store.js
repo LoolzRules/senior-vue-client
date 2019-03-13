@@ -1,7 +1,6 @@
 import Vue from "vue"
 import Vuex from "vuex"
-import axios from "axios"
-import permissionsNames from "./permissionsNames"
+import permissionsNames from "../permissionsNames"
 
 Vue.use( Vuex )
 
@@ -13,18 +12,9 @@ const store = new Vuex.Store( {
     customItemsPerPage: [ 2, 3, 4, 6, 12, { "text": "$vuetify.dataIterator.rowsPerPageAll", "value": -1, }, ],
     defaultWindowName: "VMS",
     windowName: "VMS",
-    userData: null,
-    appointments: null,
-    employees: null,
-    categories: null,
     searchResults: [],
-    parsedToken: null,
     parsedPermissions: null,
     permissionsNames,
-    axios: axios.create( {
-      baseURL: "https://api.rustamzh.com",
-      timeout: 10000,
-    } ),
   },
   /* eslint-enable no-magic-numbers */
   mutations: {

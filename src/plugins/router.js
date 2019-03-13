@@ -1,9 +1,9 @@
 import Vue from "vue"
 import Router from "vue-router"
-import Main from "./views/Main"
-import BusinessSchedule from "./views/BusinessSchedule"
-import BusinessEmployees from "./views/BusinessEmployees"
-import BusinessCategories from "./views/BusinessCategories"
+import Main from "../views/Main"
+import BusinessSchedule from "../views/BusinessSchedule"
+import BusinessEmployees from "../views/BusinessEmployees"
+import BusinessCategories from "../views/BusinessCategories"
 
 Vue.use( Router )
 

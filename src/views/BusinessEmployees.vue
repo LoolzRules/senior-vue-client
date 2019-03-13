@@ -74,7 +74,7 @@
           </v-card>
         </v-flex>
         <v-btn v-if="$store.state.parsedPermissions.permsEmployee[0]"
-               slot="actions-append" @click="addEmployeeDialog(defaultItem)"
+               slot="actions-append" @click="addEmployeeDialog"
                icon class="ma-0">
           <v-icon>
             add
@@ -84,12 +84,12 @@
     </v-flex>
 
     <v-dialog
-        v-if="($store.state.parsedPermissions.permsEmployee[0] && editedItem === -1) ||
-              ($store.state.parsedPermissions.permsEmployee[2] && editedItem !== -1)"
+        v-if="($store.state.parsedPermissions.permsEmployee[0] && editedIndex === -1) ||
+              ($store.state.parsedPermissions.permsEmployee[2] && editedIndex !== -1)"
         v-model="dialog" max-width="500px">
       <v-card>
         <v-card-title>
-          <span class="headline">{{ editedItem === -1 ? "Создание" : "Редактирование" }} сотрудника</span>
+          <span class="headline">{{ editedIndex === -1 ? "Создание" : "Редактирование" }} сотрудника</span>
         </v-card-title>
 
         <v-card-text>
@@ -104,7 +104,7 @@
               <v-flex xs12 sm6>
                 <v-text-field v-model="editedItem.phone" label="Телефон"></v-text-field>
               </v-flex>
-              <v-flex xs12 sm6>
+              <v-flex xs12 sm6 v-if="editedIndex !== -1">
                 <v-text-field v-model="editedItem.email" label="E-mail"></v-text-field>
               </v-flex>
               <v-flex v-for="(perms, key) in $store.state.permissionsNames" :key="key">
@@ -134,9 +134,7 @@
 </template>
 
 <script>
-import {
-  mapState,
-} from "vuex"
+import axiosLib from "axios"
 
 export default {
   name: "business-employees",
@@ -185,73 +183,7 @@ export default {
         rowsPerPage: 2,
       },
       answers: [ "Нет", "Да", ],
-      employees: [
-        // {
-        //   name: "Майкл Шэнкс",
-        //   title: "Старший менеджер",
-        //   phone: "87777777777",
-        //   email: "email@email.com",
-        //   serviceId: [
-        //     {
-        //       name: "a",
-        //       id: "ss1",
-        //     },
-        //     {
-        //       name: "b",
-        //       id: "ss2",
-        //     },
-        //   ],
-        //   permsCategory: [ false, false, false, false, ],
-        //   permsEmployee: [ false, false, false, false, ],
-        //   permsSchedule: [ false, false, false, false, false, false, false, false, ],
-        //   permsAppointment: [ false, false, false, false, false, false, false, false, ],
-        //   permsPermission: [ false, false, ],
-        // },
-        // {
-        //   name: "Кристиан Бэйл",
-        //   title: "Менеджер",
-        //   phone: "87777777777",
-        //   email: "email@email.com",
-        //   permsCategory: [ false, false, false, false, ],
-        //   permsEmployee: [ false, false, false, false, ],
-        //   permsSchedule: [ false, false, false, false, false, false, false, false, ],
-        //   permsAppointment: [ false, false, false, false, false, false, false, false, ],
-        //   permsPermission: [ false, false, ],
-        // },
-        // {
-        //   name: "Уилл Смит",
-        //   title: "Уборщик",
-        //   phone: "87777777777",
-        //   email: "email@email.com",
-        //   permsCategory: [ false, false, false, false, ],
-        //   permsEmployee: [ false, false, false, false, ],
-        //   permsSchedule: [ false, false, false, false, false, false, false, false, ],
-        //   permsAppointment: [ false, false, false, false, false, false, false, false, ],
-        //   permsPermission: [ false, false, ],
-        // },
-        // {
-        //   name: "Майкл Шэнкс",
-        //   title: "Старший менеджер",
-        //   phone: "87777777777",
-        //   email: "email@email.com",
-        //   permsCategory: [ false, false, false, false, ],
-        //   permsEmployee: [ false, false, false, false, ],
-        //   permsSchedule: [ false, false, false, false, false, false, false, false, ],
-        //   permsAppointment: [ false, false, false, false, false, false, false, false, ],
-        //   permsPermission: [ false, false, ],
-        // },
-        // {
-        //   name: "Майкл Шэнкс",
-        //   title: "Старший менеджер",
-        //   phone: "87777777777",
-        //   email: "email@email.com",
-        //   permsCategory: [ false, false, false, false, ],
-        //   permsEmployee: [ false, false, false, false, ],
-        //   permsSchedule: [ false, false, false, false, false, false, false, false, ],
-        //   permsAppointment: [ false, false, false, false, false, false, false, false, ],
-        //   permsPermission: [ false, false, ],
-        // },
-      ],
+      employees: [],
       defaultItem: {
         name: "",
         title: "",
@@ -285,11 +217,46 @@ export default {
     save() {
       const notFoundIndex = -1
       if ( this.editedIndex === notFoundIndex ) {
-        this.employees.push( JSON.parse( JSON.stringify( this.editedItem ) ) )
+        this.createEmployee( this.editedItem )
       } else {
-        this.$set( this.employees, this.editedIndex, JSON.parse( JSON.stringify( this.editedItem ) ) )
+        this.updateEmployee( this.editedItem )
       }
       this.close()
+    },
+    createEmployee( newEmployee ) {
+      this.$axios.post( "/employee", {
+        "employeeEmail": newEmployee.email,
+        "employeeName": newEmployee.name,
+        "employeePhone": newEmployee.phone,
+        "employeeTitle": newEmployee.title,
+        "permissions": this.unmapPermissions( newEmployee ),
+      } )
+        .then( response => {
+          this.employees.push( JSON.parse( JSON.stringify( newEmployee ) ) )
+          console.log( response )
+        } )
+        .catch( error => {
+          console.error( error )
+        } )
+    },
+    updateEmployee( employee ) {
+      axiosLib.all( [
+        this.$axios.put( `/employee/${employee.id}`, {
+          "employeeName": employee.name,
+          "employeePhone": employee.phone,
+          "employeeTitle": employee.title,
+        } ),
+        this.$axios.put( `/permission?userId=${employee.id}`,
+          this.unmapPermissions( employee ),
+        ),
+      ] )
+        .then( axiosLib.spread( ( responseEmployee, responsePermissions ) => {
+          this.$set( this.employees, this.editedIndex, JSON.parse( JSON.stringify( employee ) ) )
+          console.log( responseEmployee, responsePermissions )
+        } ) )
+        .catch( error => {
+          console.error( error )
+        } )
     },
     addEmployeeDialog() {
       this.editedIndex = -1
@@ -307,10 +274,10 @@ export default {
       confirm( "Вы действительно хотите удалить сотрудника?" ) && this.employees.splice( index, itemsToDelete )
     },
     getEmployees() {
-      return this.axios.get( "/employee" )
+      return this.$axios.get( "/employee" )
     },
     getEmployeePermissions( id ) {
-      return this.axios.get( "/permission", {
+      return this.$axios.get( "/permission", {
         params: {
           userId: id,
         },
@@ -347,11 +314,6 @@ export default {
       .catch( ( error ) => {
         console.log( error )
       } )
-  },
-  computed: {
-    ...mapState( [
-      "axios",
-    ] ),
   },
 }
 </script>

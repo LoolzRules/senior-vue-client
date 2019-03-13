@@ -128,10 +128,7 @@ import {
   format,
   parse,
 } from "date-fns"
-import {
-  mapState,
-} from "vuex"
-import axios from "axios"
+import axiosLib from "axios"
 import EventEditDialog from "../components/EventEditDialog"
 import EventCreateDialog from "../components/EventCreateDialog"
 import SchedulesEditDialog from "../components/SchedulesEditDialog"
@@ -183,7 +180,7 @@ export default {
   },
   methods: {
     getSchedules() {
-      return this.axios.get( "/schedule", {
+      return this.$axios.get( "/schedule", {
         params: this.requestParams,
       } )
     },
@@ -230,7 +227,7 @@ export default {
       //   },
       // ]
 
-      return this.axios.get( "/appointment", {
+      return this.$axios.get( "/appointment", {
         params: this.requestParams,
       } )
     },
@@ -282,8 +279,8 @@ export default {
       this.requestParams.employeeId = this.employeeId
     }
 
-    axios.all( [ this.getSchedules(), this.getAppointments(), ] )
-      .then( axios.spread( ( schedulesResponse, appointmentsResponse ) => {
+    axiosLib.all( [ this.getSchedules(), this.getAppointments(), ] )
+      .then( axiosLib.spread( ( schedulesResponse, appointmentsResponse ) => {
         console.log( schedulesResponse )
         schedulesResponse.data.forEach( schedule => {
           /* *
@@ -336,9 +333,6 @@ export default {
       } )
       return eMap
     },
-    ...mapState( [
-      "axios",
-    ] ),
   },
 }
 </script>

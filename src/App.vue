@@ -3,9 +3,11 @@
     <!--<v-navigation-drawer app fixed dark class="primary"-->
     <!--v-if="this.$keycloak.authenticated"-->
     <!--v-model="this.$store.state.drawer">-->
-    <v-navigation-drawer app fixed dark width="250"
-                         class="secondary"
-                         v-model="$store.state.drawer">
+    <v-navigation-drawer
+        v-if="this.$keycloak.authenticated"
+        v-model="$store.state.drawer"
+        app fixed dark width="250"
+        class="secondary">
 
       <v-toolbar flat class="secondary darken-1">
         <v-toolbar-title>Меню</v-toolbar-title>
@@ -30,19 +32,29 @@
     </v-navigation-drawer>
 
     <v-toolbar app dark class="secondary darken-1" id="toolbar">
-      <v-toolbar-side-icon @click="switchDrawer">
-        <v-icon>{{this.$store.state.drawer ? "arrow_back" : "menu"}}</v-icon>
+      <v-toolbar-side-icon
+          v-if="this.$keycloak.authenticated"
+          @click="switchDrawer">
+        <v-icon>{{$store.state.drawer ? "arrow_back" : "menu"}}</v-icon>
       </v-toolbar-side-icon>
 
       <v-toolbar-title class="ml-2">{{$store.state.windowName}}</v-toolbar-title>
 
       <v-spacer></v-spacer>
 
-      <template v-if="this.$keycloak.authenticated">
-        <v-icon @click="this.$keycloak.logoutFn">exit_to_app</v-icon>
+      <template v-if="$keycloak.authenticated">
+        <v-icon @click="$keycloak.logout">exit_to_app</v-icon>
       </template>
-      <template v-else>
-        <v-btn depressed class="accent" @click="this.$keycloak.loginFn">Войти</v-btn>
+      <template v-else-if="$keycloak.ready">
+        <v-btn @click="$keycloak.login"
+            depressed class="accent">
+          Войти
+        </v-btn>
+        <v-btn
+            @click="$keycloak.register"
+            depressed class="accent">
+          Регистрация
+        </v-btn>
       </template>
     </v-toolbar>
 
@@ -89,9 +101,6 @@ export default {
       this.$store.state.drawer = !this.$store.state.drawer
     },
   },
-  // mounted() {
-  //   console.log( this.$keycloak, this.$store )
-  // },
 }
 </script>
 
