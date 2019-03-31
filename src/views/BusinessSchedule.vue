@@ -92,8 +92,8 @@
                 <span class="slot-index">{{n}}</span>
                 <v-layout
                     v-if="!$store.state.parsedPermissions ||
-                      (employeeId === $store.state.parsedToken.sub && $store.state.parsedPermissions.permsAppointment[0]) ||
-                      (employeeId !== $store.state.parsedToken.sub && $store.state.parsedPermissions.permsAppointment[4])"
+                      (employeeId === $keycloak.authenticated && $store.state.parsedPermissions.permsAppointment[0]) ||
+                      (employeeId !== $keycloak.authenticated && $store.state.parsedPermissions.permsAppointment[4])"
                     row justify-center
                     @click="$refs.eventCreateDialog.open( schedule, n-1, eventsMap, date )"
                     v-ripple class="my-add-event px-1">
@@ -120,6 +120,14 @@
 
     <schedules-edit-dialog ref="schedulesEditDialog"/>
 
+    <schedule-create-dialog ref="scheduleCreateDialog"/>
+
+    <v-btn @click="$refs.scheduleCreateDialog.open()"
+           fab fixed bottom right
+           dark class="accent">
+      <v-icon>add</v-icon>
+    </v-btn>
+
   </v-layout>
 </template>
 
@@ -132,6 +140,7 @@ import axiosLib from "axios"
 import EventEditDialog from "../components/EventEditDialog"
 import EventCreateDialog from "../components/EventCreateDialog"
 import SchedulesEditDialog from "../components/SchedulesEditDialog"
+import ScheduleCreateDialog from "../components/ScheduleCreateDialog"
 
 export default {
   name: "business-home",
@@ -139,6 +148,7 @@ export default {
     EventEditDialog,
     EventCreateDialog,
     SchedulesEditDialog,
+    ScheduleCreateDialog,
   },
   props: [
     "employeeId",
@@ -165,11 +175,6 @@ export default {
         weekdays: [ 1, 2, 3, 4, 5, 6, 0, ], // eslint-disable-line no-magic-numbers
         height: 0, // eslint-disable-line no-magic-numbers
         model: false,
-      },
-      employee: {
-        id: 1,
-        name: "Макар Лежников",
-        title: "Написатель кода",
       },
       datum: {
         schedules: [],
@@ -281,7 +286,7 @@ export default {
 
     axiosLib.all( [ this.getSchedules(), this.getAppointments(), ] )
       .then( axiosLib.spread( ( schedulesResponse, appointmentsResponse ) => {
-        console.log( schedulesResponse )
+        // console.log( schedulesResponse )
         schedulesResponse.data.forEach( schedule => {
           /* *
            * 1) Makes array of day indices from weekdayCode
@@ -373,4 +378,8 @@ export default {
   @media (max-width: 600px)
     .v-calendar-daily_head-day-label
       font-size 20px
+
+  .add-fab
+    position absolute
+
 </style>

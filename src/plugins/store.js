@@ -23,7 +23,7 @@ const store = new Vuex.Store( {
     },
   },
   actions: {
-    setMessage: ( { commit, state, }, newValue ) => {
+    setWindowName: ( { commit, state, }, newValue ) => {
       if ( !newValue ) {
         commit( "SET_WINDOW_NAME", state.defaultWindowName )
       } else {

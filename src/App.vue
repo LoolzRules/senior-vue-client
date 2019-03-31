@@ -18,7 +18,6 @@
       <v-list>
         <v-list-tile v-for="(item, index) in menu"
                      active-class="primary"
-                     @click="$store.dispatch('setMessage', item.name)"
                      :to="item.href"
                      :key="index">
           <v-list-tile-action>
@@ -104,8 +103,10 @@ export default {
 }
 </script>
 
-<style>
-  html {
-    overflow-y: auto;
-  }
+<style lang="stylus">
+  html
+    overflow-y auto
+
+  .v-icon
+    display inline-flex !important
 </style>

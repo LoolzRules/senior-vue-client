@@ -3,9 +3,9 @@ import Vuetify from "vuetify"
 import ru from "vuetify/lib/locale/ru"
 import colors from "vuetify/es5/util/colors"
 
+import "material-design-icons-iconfont/dist/material-design-icons.css"
 import "vuetify/src/stylus/app.styl"
 import "typeface-roboto/index.css"
-import "material-design-icons-iconfont/dist/material-design-icons.css"
 
 Vue.use( Vuetify, {
   lang: {

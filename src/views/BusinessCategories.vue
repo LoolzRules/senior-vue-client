@@ -124,7 +124,7 @@
 
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="accent" flat @click="dialogNewCategory = false">Отмена</v-btn>
+          <v-btn color="accent" flat @click="dialogNewCategory.show = false">Отмена</v-btn>
           <v-btn color="accent" flat @click="addNewCategory">Сохранить</v-btn>
         </v-card-actions>
       </v-card>
@@ -173,7 +173,7 @@
 
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="accent" flat @click="dialogNewService = false">Отмена</v-btn>
+          <v-btn color="accent" flat @click="dialogNewService.show = false">Отмена</v-btn>
           <v-btn color="accent" flat @click="addNewService">Сохранить</v-btn>
         </v-card-actions>
       </v-card>
@@ -182,9 +182,10 @@
           <v-layout
               justify-center
               align-center>
-            <v-progress-circular v-if="!dialogNewService.loaded"
-                                 indeterminate
-                                 color="primary">
+            <v-progress-circular
+                v-if="!dialogNewService.loaded"
+                indeterminate
+                color="primary">
             </v-progress-circular>
             <template v-else>
               <span v-if="dialogNewService.statusIs200" class="text-xs-center white--text">
@@ -236,13 +237,13 @@ export default {
   },
   methods: {
     resetFields( obj ) {
-      const twoSeconds = 2000
+      const timeout = 200
       setTimeout( _ => {
         obj.show = false
         obj.loading = false
         obj.loaded = false
         obj.statusIs200 = false
-      }, twoSeconds )
+      }, timeout )
     },
     showNewServiceDialog( categoryId ) {
       this.newService.categoryId = categoryId
@@ -252,7 +253,7 @@ export default {
       this.dialogNewService.loading = true
       this.createService( this.newService )
         .then( response => {
-          this.dialogNewService.statusIs200 = ( response.statusIs200 === 201 ) // eslint-disable-line no-magic-numbers
+          this.dialogNewService.statusIs200 = ( response.statusIs200 === 200 ) // eslint-disable-line no-magic-numbers
         } )
         .catch( error => {
           console.error( error )
@@ -261,6 +262,7 @@ export default {
         .finally( () => {
           this.dialogNewService.loaded = true
           this.resetFields( this.dialogNewService )
+          this.getCategoriesAndServices()
         } )
     },
     addNewCategory() {
@@ -276,6 +278,7 @@ export default {
         .finally( () => {
           this.dialogNewCategory.loaded = true
           this.resetFields( this.dialogNewCategory )
+          this.getCategoriesAndServices()
         } )
     },
     createCategory( name ) {
@@ -288,11 +291,17 @@ export default {
         .then( response => {
           console.log( response )
         } )
+        .finally( _ => {
+          this.getCategoriesAndServices()
+        } )
     },
     deleteCategory( category ) {
       this.$axios.delete( `/category/${category.id}` )
         .then( response => {
           console.log( response )
+        } )
+        .finally( _ => {
+          this.getCategoriesAndServices()
         } )
     },
     createService( service ) {
@@ -308,6 +317,12 @@ export default {
         .then( response => {
           console.log( response )
         } )
+        .catch( error => {
+          console.error( error )
+        } )
+        .finally( _ => {
+          this.getCategoriesAndServices()
+        } )
     },
     deleteService( category, service ) {
       this.$axios.delete( "/service", {
@@ -317,6 +332,9 @@ export default {
       } )
         .then( response => {
           console.log( response )
+        } )
+        .finally( _ => {
+          this.getCategoriesAndServices()
         } )
     },
     getCategories() {
@@ -333,25 +351,28 @@ export default {
         },
       } )
     },
+    getCategoriesAndServices() {
+      this.getCategories()
+        .then( response => {
+          response.data.forEach( category => {
+            category.children = []
+            this.getServices( category.id )
+              .then( resp => {
+                category.children = resp.data
+              } )
+              .catch( err => {
+                console.error( err )
+              } )
+          } )
+          this.categories = response.data
+        } )
+        .catch( error => {
+          console.error( error )
+        } )
+    },
   },
   mounted() {
-    this.getCategories()
-      .then( response => {
-        response.data.forEach( category => {
-          category.children = []
-          this.getServices( category.id )
-            .then( resp => {
-              category.children = resp.data
-            } )
-            .catch( err => {
-              console.error( err )
-            } )
-        } )
-        this.categories = response.data
-      } )
-      .catch( error => {
-        console.error( error )
-      } )
+    this.getCategoriesAndServices()
   },
 }
 </script>

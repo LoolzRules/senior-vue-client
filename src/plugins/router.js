@@ -12,10 +12,12 @@ const router = new Router( {
   routes: [
     {
       path: "/",
+      name: "main",
       component: Main,
     },
     {
       path: "/schedule",
+      name: "mySchedule",
       component: BusinessSchedule,
       props: true,
     },
@@ -27,29 +29,52 @@ const router = new Router( {
     },
     {
       path: "/business_employees",
+      name: "employees",
       component: BusinessEmployees,
     },
     {
       path: "/business_categories",
+      name: "categories",
       component: BusinessCategories,
     },
   ],
 } )
 
-// router.beforeEach( ( to, from, next ) => {
-//   if ( !router.app.$keycloak.authenticated ) {
-//     if ( to.path !== "/" ) {
-//       next( "/" )
-//     } else {
-//       next()
-//     }
-//   } else {
-//     if ( from.name === null && to.path === "/" ) {
-//       next( "/home" )
-//     } else {
-//       next()
-//     }
-//   }
-// } )
+router.beforeEach( ( to, from, next ) => {
+  // if ( !router.app.$keycloak.authenticated ) {
+  //   if ( to.path !== "/" ) {
+  //     next( "/" )
+  //   } else {
+  //     next()
+  //   }
+  // } else {
+  //   if ( from.name === null && to.path === "/" ) {
+  //     next( "/home" )
+  //   } else {
+  //     next()
+  //   }
+  // }
+  if ( router.app.$store ) {
+    let name = "VMS"
+    switch ( to.name ) {
+      case "employees":
+        name = "Сотрудники"
+        break
+      case "categories":
+        name = "Услуги"
+        break
+      case "mySchedule":
+      case "otherSchedule":
+        name = "Расписание"
+        break
+      case "main":
+      default:
+        break
+    }
+    router.app.$store.dispatch( "setWindowName", name )
+  }
+
+  next()
+} )
 
 export default router

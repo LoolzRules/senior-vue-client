@@ -11,7 +11,8 @@
         <v-flex
             slot="item"
             slot-scope="props"
-            pa-1 :class="`xs${Math.max( 12/pagination.rowsPerPage, 3 )}`">
+            pa-1
+            :class="`xs${Math.max( 12/pagination.rowsPerPage, 3 )}`">
           <v-card>
             <v-card-title class="subheading font-weight-bold layout justify-space-between">
               {{ props.item.name }}
@@ -104,7 +105,7 @@
               <v-flex xs12 sm6>
                 <v-text-field v-model="editedItem.phone" label="Телефон"></v-text-field>
               </v-flex>
-              <v-flex xs12 sm6 v-if="editedIndex !== -1">
+              <v-flex xs12 sm6>
                 <v-text-field v-model="editedItem.email" label="E-mail"></v-text-field>
               </v-flex>
               <v-flex v-for="(perms, key) in $store.state.permissionsNames" :key="key">
@@ -180,7 +181,7 @@ export default {
         },
       ],
       pagination: {
-        rowsPerPage: 2,
+        rowsPerPage: 4,
       },
       answers: [ "Нет", "Да", ],
       employees: [],
@@ -238,6 +239,9 @@ export default {
         .catch( error => {
           console.error( error )
         } )
+        .finally( _ => {
+          this.getEmployeesWithPermissions()
+        } )
     },
     updateEmployee( employee ) {
       axiosLib.all( [
@@ -257,6 +261,21 @@ export default {
         .catch( error => {
           console.error( error )
         } )
+        .finally( _ => {
+          this.getEmployeesWithPermissions()
+        } )
+    },
+    deleteEmployee( employee ) {
+      this.$axios.delete( `/employee/${employee.id}` )
+        .then( resp => {
+          console.log( resp )
+        } )
+        .catch( err => {
+          console.error( err )
+        } )
+        .finally( _ => {
+          this.getEmployeesWithPermissions()
+        } )
     },
     addEmployeeDialog() {
       this.editedIndex = -1
@@ -269,9 +288,12 @@ export default {
       this.dialog = true
     },
     deleteEmployeeDialog( employee ) {
-      const index = this.employees.indexOf( employee )
-      const itemsToDelete = 1
-      confirm( "Вы действительно хотите удалить сотрудника?" ) && this.employees.splice( index, itemsToDelete )
+      // const index = this.employees.indexOf( employee )
+      // const itemsToDelete = 1
+      if ( confirm( "Вы действительно хотите удалить сотрудника?" ) ) {
+        // this.employees.splice( index, itemsToDelete )
+        this.deleteEmployee( employee )
+      }
     },
     getEmployees() {
       return this.$axios.get( "/employee" )
@@ -293,27 +315,30 @@ export default {
         },
       } )
     },
+    getEmployeesWithPermissions() {
+      this.getEmployees()
+        .then( ( response ) => {
+          response.data.forEach( employee => {
+            this.getEmployeePermissions( employee.id )
+              .then( resp => {
+                const permissions = this.mapPermissions( resp.data )
+                for ( let key in permissions ) {
+                  this.$set( employee, key, permissions[ key ] )
+                }
+              } )
+              .catch( err => {
+                console.log( err )
+              } )
+          } )
+          this.employees = response.data
+        } )
+        .catch( ( error ) => {
+          console.log( error )
+        } )
+    },
   },
   mounted() {
-    this.getEmployees()
-      .then( ( response ) => {
-        response.data.forEach( employee => {
-          this.getEmployeePermissions( employee.id )
-            .then( resp => {
-              const permissions = this.mapPermissions( resp.data )
-              for ( let key in permissions ) {
-                this.$set( employee, key, permissions[ key ] )
-              }
-            } )
-            .catch( err => {
-              console.log( err )
-            } )
-        } )
-        this.employees = response.data
-      } )
-      .catch( ( error ) => {
-        console.log( error )
-      } )
+    this.getEmployeesWithPermissions()
   },
 }
 </script>
