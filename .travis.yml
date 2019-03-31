@@ -1,0 +1,30 @@
+dist: trusty
+language: node_js
+
+cache:
+  bundler: true
+  directories:
+  - ./node_modules
+
+addons:
+  apt:
+    packages:
+      - jq
+
+node_js:
+- "stable"
+before_script:
+- npm install
+
+script:
+  - npm run build
+
+deploy:
+  provider: script
+  script:
+    - TOKEN=$(curl -X POST "https://auth.rustamzh.com/auth/realms/Vqms/protocol/openid-connect/token" -d "client_id=vqms&username="$USERNAME"&password="$PASSWORD"&grant_type=password" | jq .access_token)
+    - curl -X DELETE "$URL/files?version=1.0&businessId=$BUSINESSID" -H "Authorization: Bearer $TOKEN"
+    - cd dist
+    - find * -type f | xargs -n 2 -t curl -X POST "$URL/files?version=1.0&relativePath=$1&businessId=$BUSINESSID" -H "Authorization: Bearer $TOKEN" -F "file=@$PWD/$1" 
+  on:
+    tags: true
