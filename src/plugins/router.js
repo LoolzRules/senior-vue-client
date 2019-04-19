@@ -4,6 +4,7 @@ import Main from "../views/Main"
 import BusinessSchedule from "../views/BusinessSchedule"
 import BusinessEmployees from "../views/BusinessEmployees"
 import BusinessCategories from "../views/BusinessCategories"
+import ClientAppointments from "../views/ClientAppointments"
 
 Vue.use( Router )
 
@@ -37,6 +38,11 @@ const router = new Router( {
       name: "categories",
       component: BusinessCategories,
     },
+    {
+      path: "/appointments",
+      name: "appointments",
+      component: ClientAppointments,
+    },
   ],
 } )
 
@@ -47,13 +53,8 @@ router.beforeEach( ( to, from, next ) => {
   //   } else {
   //     next()
   //   }
-  // } else {
-  //   if ( from.name === null && to.path === "/" ) {
-  //     next( "/home" )
-  //   } else {
-  //     next()
-  //   }
   // }
+
   if ( router.app.$store ) {
     let name = "VMS"
     switch ( to.name ) {
@@ -66,6 +67,9 @@ router.beforeEach( ( to, from, next ) => {
       case "mySchedule":
       case "otherSchedule":
         name = "Расписание"
+        break
+      case "appointments":
+        name = "Записи"
         break
       case "main":
       default:

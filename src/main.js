@@ -5,6 +5,10 @@ import router from "./plugins/router"
 import store from "./plugins/store"
 import keycloak from "./plugins/keycloak"
 import axios from "./plugins/axios"
+import axiosLib from "axios"
+import {
+  cacheAdapterEnhancer,
+} from "axios-extensions"
 import "./plugins/vuetify"
 
 Vue.config.productionTip = false
@@ -55,6 +59,9 @@ const unmapPermissions = permsObject => {
 Vue.use( axios, {
   baseURL: "https://api.rustamzh.com",
   timeout: 10000,
+  adapter: cacheAdapterEnhancer( axiosLib.defaults.adapter, {
+    enabledByDefault: false,
+  } ),
 } )
 
 Vue.use( keycloak, {
@@ -84,13 +91,23 @@ new Vue( {
 
     this.$axios.interceptors.request.use( config => {
       if ( !( config.data && config.data.mainSearch ) ) {
-        config.headers.Authorization = `Bearer ${this.$keycloak.token}`
+        if ( this.$keycloak.token ) {
+          config.headers.Authorization = `Bearer ${this.$keycloak.token}`
+        }
       } else {
         config.data = null
         config.headers["accept"] = "application/vnd.dto.1.0+json"
       }
       return config
     } )
+
+    this.$axios.interceptors.response.use(
+      response => response,
+      error => {
+        alert( `${error.response.status}: ${error.response.data.message}` )
+        throw error
+      }
+    )
 
     this.$keycloak.init( keycloakInit ).success( () => {
       if ( this.$keycloak.tokenParsed ) {

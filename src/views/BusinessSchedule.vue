@@ -35,7 +35,7 @@
                 {{option.text}}
               </v-btn>
             </v-btn-toggle>
-            <template v-if="$store.state.parsedPermissions.permsSchedule[6]">
+            <template v-if="$store.state.parsedPermissions && $store.state.parsedPermissions.permsSchedule[6]">
               <v-btn @click="$refs.schedulesEditDialog.open( datum.schedules )"
                      icon class="ma-0 ml-2 primary elevation-1">
                 <v-icon small>
@@ -92,10 +92,11 @@
                 <span class="slot-index">{{n}}</span>
                 <v-layout
                     v-if="!$store.state.parsedPermissions ||
+                      $keycloak.tokenParsed.realm_access.roles.includes( 'client' ) ||
                       (employeeId === $keycloak.authenticated && $store.state.parsedPermissions.permsAppointment[0]) ||
                       (employeeId !== $keycloak.authenticated && $store.state.parsedPermissions.permsAppointment[4])"
                     row justify-center
-                    @click="$refs.eventCreateDialog.open( schedule, n-1, eventsMap, date )"
+                    @click="$refs.eventCreateDialog.open( schedule, n-1, eventsMap, date, serviceId )"
                     v-ripple class="my-add-event px-1">
                   <v-icon small>add</v-icon>
                 </v-layout>
@@ -154,6 +155,7 @@ export default {
     "employeeId",
     "employeeName",
     "employeeTitle",
+    "serviceId",
   ],
   data() {
     return {
@@ -190,48 +192,6 @@ export default {
       } )
     },
     getAppointments() {
-      // this.datum.appointments = [
-      //   {
-      //     businessId: "b1",
-      //     clientId: "c1",
-      //     scheduleId: "s1",
-      //     serviceId: "se1",
-      //     date: "2019-02-25",
-      //     employeeId: "e1",
-      //     id: "a1",
-      //     isConfirmed: true,
-      //     slotDuration: 2,
-      //     slotIndex: 3,
-      //     status: 0,
-      //   },
-      //   {
-      //     businessId: "b1",
-      //     clientId: "c1",
-      //     scheduleId: "s2",
-      //     serviceId: "se1",
-      //     date: "2019-03-02",
-      //     employeeId: "e1",
-      //     id: "a2",
-      //     isConfirmed: true,
-      //     slotDuration: 1,
-      //     slotIndex: 1,
-      //     status: 0,
-      //   },
-      //   {
-      //     businessId: "b1",
-      //     clientId: "c1",
-      //     scheduleId: "s2",
-      //     serviceId: "se1",
-      //     date: "2019-03-02",
-      //     employeeId: "e1",
-      //     id: "a3",
-      //     isConfirmed: true,
-      //     slotDuration: 2,
-      //     slotIndex: 2,
-      //     status: 0,
-      //   },
-      // ]
-
       return this.$axios.get( "/appointment", {
         params: this.requestParams,
       } )
@@ -280,6 +240,7 @@ export default {
     },
   },
   mounted() {
+    console.log( this )
     if ( this.employeeId ) {
       this.requestParams.employeeId = this.employeeId
     }
@@ -305,7 +266,8 @@ export default {
           /* *
            * 2) Adds date for startTime
            * */
-          schedule.start = parse( schedule.startTime )
+          schedule.start = parse( `${schedule.startDate}T${schedule.startTime}:00` )
+          console.log( schedule.start, "" )
 
           /* *
            * 3) Adds duration

@@ -1,5 +1,5 @@
 <template>
-  <v-dialog lazy persistent v-model="show" max-width="400px">
+  <v-dialog lazy v-model="show" max-width="400px">
     <v-card v-if="!loading">
       <v-card-title>
         <span class="headline">Запись на {{editedEvent.formattedDate}}, {{editedEvent.formattedTime}}</span>
@@ -16,9 +16,6 @@
           <v-flex xs12 sm6>
             <v-text-field v-model="editedEvent.client.email" label="E-mail"></v-text-field>
           </v-flex>
-          <v-flex xs12 sm6>
-            <v-text-field v-model="editedEvent.name" label="Название услуги"></v-text-field>
-          </v-flex>
         </v-layout>
       </v-container>
 
@@ -28,8 +25,7 @@
         <v-btn color="accent" flat @click="save">Подтвердить</v-btn>
       </v-card-actions>
     </v-card>
-    <v-card v-else
-      :class="response && (response.status === 200 ? 'success' : 'error')">
+    <v-card v-else>
       <v-card-text>
         <v-layout
             justify-center
@@ -57,7 +53,6 @@
 <script>
 import {
   format,
-  addMinutes,
 } from "date-fns"
 
 export default {
@@ -95,7 +90,7 @@ export default {
     }
   },
   methods: {
-    open( schedule, slotIndex, eventsMap, date ) {
+    open( schedule, slotIndex, eventsMap, date, serviceId ) {
       this.schedule = schedule
       this.slotIndex = slotIndex
       this.eventsMap = eventsMap
@@ -106,6 +101,15 @@ export default {
       this.editedEvent.businessId = schedule.businessId
       this.editedEvent.formattedDate = this.formattedDate
       this.editedEvent.formattedTime = this.formattedTime
+      this.editedEvent.serviceId = serviceId
+      console.log( this.$keycloak )
+      this.editedEvent.employeeId = this.$parent.employeeId
+      this.editedEvent.client.name = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.name : false
+      this.editedEvent.client.email = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.email : false
+      this.editedEvent.clientId = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.sub : false
+      this.editedEvent.slotIndex = this.slotIndex
+      this.editedEvent.slotDuration = this.schedule.slotDuration
+      console.log( this )
       this.show = true
     },
     close() {
@@ -120,6 +124,27 @@ export default {
     save() {
       this.loading = true
       const toReturn = JSON.parse( JSON.stringify( this.editedEvent ) )
+      console.log( toReturn )
+      this.$axios.post( "/appointment", {
+        businessId: this.editedEvent.businessId,
+        clientId: this.editedEvent.clientId,
+        date: this.editedEvent.formattedDate,
+        employeeId: this.editedEvent.employeeId,
+        scheduleId: this.editedEvent.scheduleId,
+        serviceId: this.editedEvent.serviceId,
+        slotDuration: this.editedEvent.slotDuration,
+        slotIndex: this.editedEvent.slotIndex,
+      } )
+        .then( resp => {
+          this.response.status = 200
+        } )
+        .catch( err => {
+          console.error( err )
+          this.response.status = 0
+        } )
+        .finally( _ => {
+          this.loaded = true
+        } )
       // this.close()
       return toReturn
     },
@@ -129,10 +154,12 @@ export default {
   },
   computed: {
     formattedDate() {
-      return format( this.date, "DD.MM.YYYY" )
+      return format( this.date, "YYYY-MM-DD" )
     },
     formattedTime() {
-      let eventDate = addMinutes( new Date( this.schedule.startTime.date ), this.schedule.slotDuration * this.slotIndex )
+      const eventDate = new Date( this.date )
+      eventDate.setHours( this.schedule.start.getHours() )
+      eventDate.setMinutes( this.schedule.start.getMinutes() + this.schedule.slotDuration * this.slotIndex )
       return format( eventDate, "HH:mm" )
     },
   },

@@ -11,7 +11,8 @@
         <v-flex
             slot="item"
             slot-scope="props"
-            pa-1 :class="`xs${Math.max( 12/pagination.rowsPerPage, 3 )}`">
+            class="xs-12"
+            :class="`sm${Math.max( 12/pagination.rowsPerPage, 3 )}`">
           <v-card>
             <v-card-title class="subheading font-weight-bold layout justify-space-between">
               <template v-if="$store.state.parsedPermissions.permsCategory[2]">
@@ -46,7 +47,15 @@
 
               <v-list-tile v-for="child in props.item.children"
                            :key="child.id">
-                <v-list-tile-content>
+                <v-list-tile-content class="shrink mr-2">
+                  <v-btn @click="setEmployeeList( child.id )"
+                         icon small class="ma-0">
+                    <v-icon>
+                      people
+                    </v-icon>
+                  </v-btn>
+                </v-list-tile-content>
+                <v-list-tile-content class="grow mr-2">
                   <template v-if="$store.state.parsedPermissions.permsCategory[2]">
                     <v-edit-dialog
                         :return-value.sync="child.name"
@@ -72,7 +81,7 @@
                         :return-value.sync="child.cost"
                         lazy
                         @save="updateService(props.item, child)">
-                      {{ child.cost }}
+                      {{ child.cost }}₸
                       <template v-slot:input>
                         <v-text-field
                             v-model="child.cost"
@@ -87,12 +96,15 @@
                   </template>
                 </v-list-tile-content>
 
-                <v-layout align-content-center justify-end>
-                  <v-icon v-if="$store.state.parsedPermissions.permsCategory[3]"
-                          @click="deleteService( props.item, child )"
-                          small class="my-2">
-                    delete
-                  </v-icon>
+                <v-layout v-if="$store.state.parsedPermissions.permsCategory[3]"
+                          align-content-center justify-end class="shrink pl-2">
+                  <v-btn @click="deleteService( props.item, child )"
+                         icon small class="ma-0 my-2">
+                    <v-icon small>
+                      delete
+                    </v-icon>
+                  </v-btn>
+
                 </v-layout>
               </v-list-tile>
               <v-list-tile v-if="$store.state.parsedPermissions.permsCategory[0]">
@@ -201,10 +213,45 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="dialogEmployees.show" max-width="500px">
+      <v-card>
+        <v-card-text v-if="dialogEmployees.loaded">
+          <v-list dense subheader>
+            <v-list-tile v-for="( field, index ) in dialogEmployees.employees" :key="index">
+              <v-list-tile-content class="grow mr-2">
+                {{field.name}}
+              </v-list-tile-content>
+              <v-list-tile-content class="shrink">
+                <v-icon v-if="field.hasService"
+                        @click="deleteServiceFromEmployee( field.id )">
+                  delete
+                </v-icon>
+                <v-icon v-else
+                        @click="addServiceToEmployee( field.id )">
+                  add
+                </v-icon>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list>
+        </v-card-text>
+        <v-card-text v-else>
+          <v-layout
+              justify-center
+              align-center>
+            <v-progress-circular
+                indeterminate
+                color="primary">
+            </v-progress-circular>
+          </v-layout>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
   </v-layout>
 </template>
 
 <script>
+import axiosLib from "axios"
 
 export default {
   name: "business-categories",
@@ -232,6 +279,12 @@ export default {
         loading: false,
         loaded: false,
         statusIs200: false,
+      },
+      dialogEmployees: {
+        serviceId: null,
+        employees: null,
+        show: false,
+        loaded: false,
       },
     }
   },
@@ -368,6 +421,33 @@ export default {
         } )
         .catch( error => {
           console.error( error )
+        } )
+    },
+    setEmployeeList( serviceId ) {
+      this.dialogEmployees.serviceId = serviceId
+      this.dialogEmployees.show = true
+
+      axiosLib.all( [
+        this.$axios.get( "/employee" ),
+        this.$axios.get( `/service/${serviceId}` ),
+      ] ).then( axiosLib.spread( ( responseEmployee, responseService ) => {
+        this.dialogEmployees.employees = responseEmployee.data.map( employee => {
+          employee.hasService = responseService.data.includes( employee.id )
+          return employee
+        } )
+        this.dialogEmployees.loaded = true
+      } ) )
+    },
+    deleteServiceFromEmployee( eId ) {
+      this.$axios.delete( `/service/${this.dialogEmployees.serviceId}?employeeId=${eId}` )
+        .finally( _ => {
+          this.setEmployeeList( this.dialogEmployees.serviceId )
+        } )
+    },
+    addServiceToEmployee( eId ) {
+      this.$axios.post( `/service/${this.dialogEmployees.serviceId}?employeeId=${eId}` )
+        .finally( _ => {
+          this.setEmployeeList( this.dialogEmployees.serviceId )
         } )
     },
   },

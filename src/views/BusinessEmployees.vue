@@ -12,7 +12,8 @@
             slot="item"
             slot-scope="props"
             pa-1
-            :class="`xs${Math.max( 12/pagination.rowsPerPage, 3 )}`">
+            class="xs-12"
+            :class="`sm${Math.max( 12/pagination.rowsPerPage, 3 )}`">
           <v-card>
             <v-card-title class="subheading font-weight-bold layout justify-space-between">
               {{ props.item.name }}
@@ -39,11 +40,13 @@
               <template v-for="( field, index ) in tableFields">
                 <v-list-tile v-if="!Array.isArray( props.item[field.value] )"
                              :key="index">
-                  <v-list-tile-content>
+                  <v-list-tile-content class="grow mr-2">
                     {{field.text}}
                   </v-list-tile-content>
-                  <v-list-tile-content class="align-end font-weight-bold text-truncate">
-                    {{props.item[field.value]}}
+                  <v-list-tile-content class="shrink">
+                    <span class="pl-1 font-weight-bold text-truncate valueText">
+                      {{props.item[field.value]}}
+                    </span>
                   </v-list-tile-content>
                 </v-list-tile>
 
@@ -51,11 +54,13 @@
                   <v-list-tile slot="activator">{{field.text}}</v-list-tile>
                   <v-list-tile v-for="( perm, i ) in props.item[field.value]"
                                :key="i">
-                    <v-list-tile-content>
+                    <v-list-tile-content class="grow mr-2">
                       {{ $store.state.permissionsNames[field.value][i] }}
                     </v-list-tile-content>
-                    <v-list-tile-content class="align-end font-weight-bold">
-                      {{ answers[ perm + 0 ] }}
+                    <v-list-tile-content class="shrink">
+                      <span class="pl-1 font-weight-bold text-truncate valueText">
+                        {{ answers[ perm + 0 ] }}
+                      </span>
                     </v-list-tile-content>
                   </v-list-tile>
                 </v-list-group>
@@ -142,6 +147,7 @@ export default {
   data() {
     return {
       dialog: false,
+      dialogServices: false,
       tableFields: [
         {
           text: "Должность",
@@ -154,10 +160,6 @@ export default {
         {
           text: "E-mail",
           value: "email",
-        },
-        {
-          text: "Сервисы",
-          value: "services",
         },
         {
           text: "Категории и сервисы",
@@ -267,12 +269,8 @@ export default {
     },
     deleteEmployee( employee ) {
       this.$axios.delete( `/employee/${employee.id}` )
-        .then( resp => {
-          console.log( resp )
-        } )
-        .catch( err => {
-          console.error( err )
-        } )
+        .then( console.log )
+        .catch( console.error )
         .finally( _ => {
           this.getEmployeesWithPermissions()
         } )
@@ -342,3 +340,9 @@ export default {
   },
 }
 </script>
+
+<style lang="stylus">
+  .valueText
+    line-height 1!important
+    max-width 100%
+</style>

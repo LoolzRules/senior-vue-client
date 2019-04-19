@@ -6,26 +6,10 @@
       </v-card-title>
 
       <v-container grid-list-lg>
-        <v-layout row v-if="true">
+        <v-layout column>
           <v-layout row xs12 wrap
                     v-for="schedule in schedules"
                     :key="schedule.id">
-            {{
-            /* {
-            * "id": "5c76a7e2ec8d21000140065a",
-            * "employeeId": "51622a1c-7704-4ba4-a0f0-328b3e44d289",
-            * "businessId": "5c728ffc31ba3f000134ef64",
-            * "weekdayCode": 80,
-            * "startTime": "09:00",
-            * "slotDuration": 40,
-            * "slots": 5,
-            * "startDate": "2019-02-27",
-            * "endDate": "2019-04-27",
-            * "weekDays": [ false, true, false, true, false, false, false ],
-            * "start": null,
-            * "duration": 200
-            * } */
-            }}
             <v-flex xs12 sm6>
               <v-text-field v-model="schedule.startDate" label="Дата начала"></v-text-field>
             </v-flex>
@@ -76,7 +60,6 @@ export default {
   },
   methods: {
     open( schedules ) {
-      console.log( schedules )
       this.schedules = schedules
       this.show = true
     },
@@ -88,7 +71,7 @@ export default {
     },
   },
   mounted() {
-    console.log( this.$parent, this.$keycloak )
+    // console.log( this.$parent, this.$keycloak )
   },
 }
 </script>
