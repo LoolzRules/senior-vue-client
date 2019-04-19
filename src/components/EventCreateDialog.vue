@@ -102,7 +102,6 @@ export default {
       this.editedEvent.formattedDate = this.formattedDate
       this.editedEvent.formattedTime = this.formattedTime
       this.editedEvent.serviceId = serviceId
-      console.log( this.$keycloak )
       this.editedEvent.employeeId = this.$parent.employeeId
       this.editedEvent.client.name = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.name : false
       this.editedEvent.client.email = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.email : false
