@@ -36,10 +36,10 @@
               color="primary">
           </v-progress-circular>
           <template v-else>
-            <span v-if="response.status === 200" class="text-xs-center white--text">
+            <span v-if="response.status === 200" class="text-xs-center">
               Запись успешно создана, ожидается подтверждение.<br>Вы будете уведомены при изменении статуса.
             </span>
-            <span v-else class="text-xs-center white--text">
+            <span v-else class="text-xs-center">
               При создании записи произошла ошибка, пожалуйста попробуйте еще раз.
             </span>
           </template>
@@ -113,6 +113,8 @@ export default {
     },
     close() {
       this.show = false
+      this.loading = false
+      this.loaded = false
 
       this.schedule = false
       this.slotIndex = false
@@ -143,8 +145,9 @@ export default {
         } )
         .finally( _ => {
           this.loaded = true
+          const delay = 1500
+          setTimeout( this.close, delay )
         } )
-      // this.close()
       return toReturn
     },
     detectCollision() {

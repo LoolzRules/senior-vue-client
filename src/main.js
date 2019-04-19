@@ -104,7 +104,7 @@ new Vue( {
     this.$axios.interceptors.response.use(
       response => response,
       error => {
-        alert( `${error.response.status}: ${error.response.data.message}` )
+        // alert( `${error.response.status}: ${error.response.data.message}` )
         throw error
       }
     )

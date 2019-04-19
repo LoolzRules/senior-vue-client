@@ -104,13 +104,15 @@
             </template>
           </v-layout>
 
-          <div v-for="event in eventsMap[date]"
-               :key="event.id"
-               @click="$refs.eventEditDialog.open( event )"
-               :style="{ top: myTimeToY(event.startTime) + 'px', height: myMinutesToPixels(event.duration) + 'px' }"
-               class="my-event px-1 white--text text-truncate">
-            {{"Очень длинное название ивента"}}
-          </div>
+          <template v-if="!$keycloak.tokenParsed.realm_access.roles.includes('client')">
+            <div v-for="event in eventsMap[date]"
+                 :key="event.id"
+                 @click="$refs.eventEditDialog.open( event )"
+                 :style="{ top: myTimeToY(event.slotIndex) + 'px', height: myMinutesToPixels(event.slotDuration) + 'px' }"
+                 class="my-event px-1 white--text text-truncate">
+              {{event.clientId}}
+            </div>
+          </template>
         </template>
       </v-calendar>
     </v-flex>
@@ -198,9 +200,13 @@ export default {
     },
     myTimeToY( time ) {
       const digitsIndex = -2
-
       let tTY = this.$refs.calendar.timeToY( time ) + this.calendarConfig.margin
-      tTY += this.$refs.calendar.minutesToPixels( Number.parseInt( time.substr( digitsIndex ) ) )
+      if ( typeof time === "number" ) {
+        // eslint-disable-next-line
+        tTY = this.$refs.calendar.timeToY( "09:00" ) + 20 * time + this.calendarConfig.margin
+      } else {
+        tTY += this.$refs.calendar.minutesToPixels( Number.parseInt( time.substr( digitsIndex ) ) )
+      }
       return tTY
     },
     myMinutesToPixels( minutes ) {
@@ -234,7 +240,9 @@ export default {
     slotIsFilled( schedule, index, eventsMap, date ) {
       return eventsMap[ date ] && eventsMap[ date ].some( ( event ) => {
         const sameSchedule = schedule.id === event.scheduleId
-        const sameSlot = ( index >= event.slotIndex ) && ( index < event.slotIndex + event.slotDuration )
+        // eslint-disable-next-line
+        const sameSlot = ( index >= event.slotIndex ) && ( index < event.slotIndex + 1 )
+        // const sameSlot = ( index >= event.slotIndex ) && ( index < event.slotIndex + event.slotDuration )
         return sameSchedule && sameSlot
       } )
     },
