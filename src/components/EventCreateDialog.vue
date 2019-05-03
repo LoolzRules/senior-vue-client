@@ -108,7 +108,7 @@ export default {
       this.editedEvent.client.email = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.email : false
       this.editedEvent.clientId = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.sub : false
       this.editedEvent.slotIndex = this.slotIndex
-      this.editedEvent.slotDuration = this.schedule.slotDuration
+      this.editedEvent.slotDuration = 1
       console.log( this )
       this.show = true
     },

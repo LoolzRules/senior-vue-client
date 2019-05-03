@@ -194,7 +194,7 @@ export default {
       } )
     },
     getAppointments() {
-      if ( this.$keycloak.authorized && this.$keycloak.tokenParsed.realm_access.roles.includes( "employee" ) ) {
+      if ( this.$keycloak.authenticated && !this.$keycloak.tokenParsed.realm_access.roles.includes( "client" ) ) {
         return this.$axios.get( "/appointment", {
           params: this.requestParams,
         } )
@@ -304,6 +304,7 @@ export default {
           this.$set( appointment, "name", serviceResponse.data.filter( service => service.id === appointment.serviceId ).pop().name )
 
           if ( !this.$keycloak.tokenParsed.realm_access.roles.includes( "client" ) ) {
+            console.log( "here" )
             this.$axios.get( `/user/${appointment.clientId}` )
               .then( response => {
                 console.log( response.data )

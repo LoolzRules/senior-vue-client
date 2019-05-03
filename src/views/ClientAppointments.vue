@@ -19,6 +19,19 @@
           <v-divider></v-divider>
           <v-list dense>
             <v-list-tile>
+            <v-list-tile-content>
+              Статус:
+            </v-list-tile-content>
+            <v-list-tile-content class="align-end font-weight-bold">
+              <template v-if="props.item.status">
+                {{ props.item.status === 1 ? "Подтверждено" : "Отклонено" }}
+              </template>
+              <template v-else>
+                Ожидает
+              </template>
+            </v-list-tile-content>
+          </v-list-tile>
+            <v-list-tile>
               <v-list-tile-content>
                 Цена:
               </v-list-tile-content>
@@ -80,6 +93,7 @@ export default {
         } )
         this.appointments = res.data
         this.appointments.forEach( appointment => {
+          console.log( appointment )
           axiosLib.all( [
             this.getAppointmentEmployee( appointment.employeeId ),
             this.getAppointmentService( appointment.employeeId ),

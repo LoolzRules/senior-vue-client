@@ -24,7 +24,7 @@
             Имя:
           </v-list-tile-content>
           <v-list-tile-content class="align-end font-weight-bold">
-            {{event.clientId}}
+            {{event.clientName}}
           </v-list-tile-content>
         </v-list-tile>
       </v-list>
