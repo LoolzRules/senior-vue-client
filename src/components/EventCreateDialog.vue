@@ -103,7 +103,8 @@ export default {
       this.editedEvent.formattedTime = this.formattedTime
       this.editedEvent.serviceId = serviceId
       this.editedEvent.employeeId = this.$parent.employeeId
-      this.editedEvent.client.name = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.name : false
+      this.editedEvent.client.name = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.given_name : false
+      this.editedEvent.client.phone = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.phone_number : false
       this.editedEvent.client.email = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.email : false
       this.editedEvent.clientId = this.$keycloak.authenticated ? this.$keycloak.tokenParsed.sub : false
       this.editedEvent.slotIndex = this.slotIndex

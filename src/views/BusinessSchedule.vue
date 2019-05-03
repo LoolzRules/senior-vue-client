@@ -110,7 +110,7 @@
                  @click="$refs.eventEditDialog.open( event )"
                  :style="{ top: myTimeToY(event.slotIndex) + 'px', height: myMinutesToPixels(event.slotDuration) + 'px' }"
                  class="my-event px-1 white--text text-truncate">
-              {{event.clientId}}
+              {{event.name}}
             </div>
           </template>
         </template>
@@ -194,7 +194,18 @@ export default {
       } )
     },
     getAppointments() {
-      return this.$axios.get( "/appointment", {
+      if ( this.$keycloak.authorized && this.$keycloak.tokenParsed.realm_access.roles.includes( "employee" ) ) {
+        return this.$axios.get( "/appointment", {
+          params: this.requestParams,
+        } )
+      } else {
+        return this.$axios.get( "/appointment/hidden", {
+          params: this.requestParams,
+        } )
+      }
+    },
+    getEmployeeServices() {
+      return this.$axios.get( "/service", {
         params: this.requestParams,
       } )
     },
@@ -248,13 +259,19 @@ export default {
     },
   },
   mounted() {
-    console.log( this )
+    console.log( this.$keycloak )
     if ( this.employeeId ) {
       this.requestParams.employeeId = this.employeeId
+    } else {
+      this.requestParams.employeeId = this.$keycloak.tokenParsed.sub
     }
 
-    axiosLib.all( [ this.getSchedules(), this.getAppointments(), ] )
-      .then( axiosLib.spread( ( schedulesResponse, appointmentsResponse ) => {
+    axiosLib.all( [
+      this.getSchedules(),
+      this.getAppointments(),
+      this.getEmployeeServices(),
+    ] )
+      .then( axiosLib.spread( ( schedulesResponse, appointmentsResponse, serviceResponse ) => {
         // console.log( schedulesResponse )
         schedulesResponse.data.forEach( schedule => {
           /* *
@@ -281,6 +298,18 @@ export default {
            * 3) Adds duration
            * */
           schedule.duration = schedule.slots * schedule.slotDuration
+        } )
+        console.log( this.employeeId, this.$keycloak.tokenParsed.sub, appointmentsResponse )
+        appointmentsResponse.data.forEach( appointment => {
+          this.$set( appointment, "name", serviceResponse.data.filter( service => service.id === appointment.serviceId ).pop().name )
+
+          if ( !this.$keycloak.tokenParsed.realm_access.roles.includes( "client" ) ) {
+            this.$axios.get( `/user/${appointment.clientId}` )
+              .then( response => {
+                console.log( response.data )
+                this.$set( appointment, "clientName", response.data.name )
+              } )
+          }
         } )
         this.datum.schedules = schedulesResponse.data
         this.datum.appointments = appointmentsResponse.data

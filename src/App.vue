@@ -71,9 +71,9 @@ export default {
       menu: [
         [
           {
-            href: "/",
-            name: "Домашняя",
-            icon: "home",
+            href: "/dashboard",
+            name: "Статистика",
+            icon: "bar_chart",
           },
           {
             href: "/schedule",

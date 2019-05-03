@@ -1,25 +1,40 @@
 <template>
   <v-dialog v-model="show" max-width="500px">
     <v-card>
-      <v-card-title>
-        <span class="headline">Редактирование записи</span>
+      <v-card-title class="d-layout justify-space-between">
+        <span class="subheading">Редактирование записи</span>
+        <v-btn icon @click="close" class="ma-0">
+          <v-icon>
+            close
+          </v-icon>
+        </v-btn>
       </v-card-title>
 
-      <v-card-text>
-        <v-layout row wrap>
-          <v-flex xs12 sm6>
+      <v-list dense>
+        <v-list-tile>
+          <v-list-tile-content>
+            Статус:
+          </v-list-tile-content>
+          <v-list-tile-content class="align-end font-weight-bold">
             {{event.isConfirmed ? "Подтвержден" : "Не подтвержден"}}
-          </v-flex>
-          <v-flex xs12 sm6>
-            Информация о клиенте: {{event.clientId}}
-          </v-flex>
-        </v-layout>
-      </v-card-text>
+          </v-list-tile-content>
+        </v-list-tile>
+        <v-list-tile>
+          <v-list-tile-content>
+            Имя:
+          </v-list-tile-content>
+          <v-list-tile-content class="align-end font-weight-bold">
+            {{event.clientId}}
+          </v-list-tile-content>
+        </v-list-tile>
+      </v-list>
 
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="accent" flat @click="close">Отмена</v-btn>
-        <v-btn color="accent" flat @click="save">Сохранить</v-btn>
+        <v-btn color="accent" flat @click="cancelEvent">Отменить</v-btn>
+        <v-btn v-if="!event.isConfirmed"
+               color="accent" flat @click="confirmEvent">Подтвердить
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -32,22 +47,49 @@ export default {
     return {
       show: false,
       event: {},
-      editedItem: {},
     }
   },
   methods: {
     open( event ) {
       this.event = event
-      this.editedItem = JSON.parse( JSON.stringify( this.event ) )
       this.show = true
     },
     close() {
-      this.editedItem = JSON.parse( JSON.stringify( this.event ) )
       this.show = false
     },
-    save() {
-      this.event = JSON.parse( JSON.stringify( this.editedItem ) )
-      this.close()
+    cancelEvent() {
+      this.$axios.put( `/appointment/${this.event.id}/employee`, {
+        isConfirmed: false,
+        status: -1,
+      }, {
+        headers: {
+          "Content-type": "application/json",
+        },
+      } )
+        .then( resp => {
+          this.event.isConfirmed = resp.data.isConfirmed
+          this.event.status = resp.data.status
+        } )
+        .finally( _ => {
+          this.close()
+        } )
+    },
+    confirmEvent() {
+      this.$axios.put( `/appointment/${this.event.id}/employee`, {
+        isConfirmed: true,
+        status: 1,
+      }, {
+        headers: {
+          "Content-type": "application/json",
+        },
+      } )
+        .then( resp => {
+          this.event.isConfirmed = resp.data.isConfirmed
+          this.event.status = resp.data.status
+        } )
+        .finally( _ => {
+          this.close()
+        } )
     },
   },
 }

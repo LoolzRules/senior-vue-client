@@ -1,6 +1,7 @@
 import Vue from "vue"
 import Router from "vue-router"
 import Main from "../views/Main"
+import BusinessDashboard from "../views/BusinessDashboard"
 import BusinessSchedule from "../views/BusinessSchedule"
 import BusinessEmployees from "../views/BusinessEmployees"
 import BusinessCategories from "../views/BusinessCategories"
@@ -15,6 +16,11 @@ const router = new Router( {
       path: "/",
       name: "main",
       component: Main,
+    },
+    {
+      path: "/dashboard",
+      name: "dashboard",
+      component: BusinessDashboard,
     },
     {
       path: "/schedule",
@@ -54,31 +60,34 @@ router.beforeEach( ( to, from, next ) => {
   //     next()
   //   }
   // }
-
-  if ( router.app.$store ) {
-    let name = "VMS"
-    switch ( to.name ) {
-      case "employees":
-        name = "Сотрудники"
-        break
-      case "categories":
-        name = "Услуги"
-        break
-      case "mySchedule":
-      case "otherSchedule":
-        name = "Расписание"
-        break
-      case "appointments":
-        name = "Записи"
-        break
-      case "main":
-      default:
-        break
+  if ( !router.app.$keycloak.authenticated &&
+    ( to.path !== "/" && !to.path.match( "/schedule" ) ) ) {
+    next( "/" )
+  } else {
+    if ( router.app.$store ) {
+      let name = "VMS"
+      switch ( to.name ) {
+        case "employees":
+          name = "Сотрудники"
+          break
+        case "categories":
+          name = "Услуги"
+          break
+        case "mySchedule":
+        case "otherSchedule":
+          name = "Расписание"
+          break
+        case "appointments":
+          name = "Записи"
+          break
+        case "main":
+        default:
+          break
+      }
+      router.app.$store.dispatch( "setWindowName", name )
     }
-    router.app.$store.dispatch( "setWindowName", name )
+    next()
   }
-
-  next()
 } )
 
 export default router
